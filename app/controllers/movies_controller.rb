@@ -7,7 +7,8 @@ class MoviesController < ApplicationController
   end
 
   def index
-    @movies = Movie.all
+    # ideally will protect against xss attacks in parameter
+    @movies = Movie.find(:all, :order => params[:sort])
   end
 
   def new
