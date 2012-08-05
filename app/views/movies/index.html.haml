@@ -2,15 +2,23 @@
 %h1
   = link_to "All Movies", movies_path()
 
+= form_tag movies_path, :method => :get, :elem => @mypath do
+  Include: 
+  - @all_ratings.each do |rating|
+    = rating
+    = check_box_tag "ratings[#{rating}]", 1, @checks[rating]
+  = hidden_field_tag 'sort', @order
+  = submit_tag 'Refresh', :id => "ratings_submit", :value => "Refresh"
+
 %table#movies
   %thead
     %tr
       %th{ :class => if params[:sort] == 'title' then 'hilite' end }
-        = link_to "Movie Title", movies_path(:sort => 'title'), :id => "title_header"
+        = link_to "Movie Title", movies_path(params.merge({:sort => 'title'})), :id => "title_header"
       %th{ :class => if params[:sort] == 'rating' then 'hilite' end }
-        = link_to "Rating", movies_path(:sort => 'rating'), :id => "ratings_header"
+        = link_to "Rating", movies_path(params.merge({:sort => 'rating'})), :id => "ratings_header"
       %th{ :class => if params[:sort] == 'release_date' then 'hilite' end }
-        = link_to "Release Date", movies_path(:sort => 'release_date'), :id => "release_date_header"
+        = link_to "Release Date", movies_path(params.merge({:sort => 'release_date'})), :id => "release_date_header"
       %th More Info
   %tbody
     - @movies.each do |movie|
