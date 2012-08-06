@@ -7,61 +7,32 @@ class MoviesController < ApplicationController
   end
 
   def index
-p "yellow"
-p params
     # find unique ratings already in the database
-      # ^^^ move into method of Movie
     @all_ratings = Movie.find(:all, :select => "distinct rating", :order => :rating).collect { |movie| movie.rating }
 
-    # ideally the sort functionality would protect against xss attacks via URL parameter
+    # ^^^ ideally the sort functionality would protect against xss attacks via URL parameter
+    # ^^^ move into method of Movie
 
     @checks = { 'G' => false, 'PG' => false, 'PG-13' => false, 'R' => false }
+
     if params[:sort] == nil then
       @order = "id"
-      #@mypath = "?sort="
     else
       @order = params[:sort]
-      #@mypath = "?sort=" + @order
     end
 
     if params[:ratings] == nil then
       @conditions = "1 = 1"
-      #@mypath = @mypath + "?ratings="
-      #@mypath = "?ratings="
     else
       @conditions = "rating in ("
       params[:ratings].each_key { |rating|
         @conditions = @conditions + "'" + rating + "',"
         @checks[rating] = true
       }
-      @conditions = @conditions + "1)"
-p "blue"
-p params[:ratings]
-      #@mypath = "?ratings="
-      #params[:ratings].each_key { |rating| @mypath = @mypath + "&ratings[" + rating + "]=1" }
-#p "red"
-#p @mypath
+      @conditions = @conditions + "'-')"
     end
 
     @movies = Movie.find(:all, :order => @order, :conditions => @conditions)
-
-@any = "ratings[PG-13]=1"
-    # if ratings not set, ignore that condition
-    #if params[:ratings] == nil then
-      #@movies = Movie.find(:all, :order => params[:sort])
-    #else
-      #@ratings = "rating in ("
-      #params[:ratings].each_key { |rating| @ratings = @ratings + "'" + rating + "'," }
-      #@movies = Movie.find(:all, :order => params[:sort], :conditions => @ratings + "1)")
-    #end
-
-    #@mypath = movies_path
-    #if params[:sort] != nil then
-      #@mypath = @mypath + "?sort=" + params[:sort]
-    #end
-    #if params[:ratings] != nil then
-      #@mypath = @mypath + "&ratings=" + params[:ratings]
-    #end
   end
 
   def new
