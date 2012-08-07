@@ -6,14 +6,31 @@ class MoviesController < ApplicationController
     # will render app/views/movies/show.<extension> by default
   end
 
+  def session_def(var, sess, key)
+#p 'session_def'
+#p var[key]
+#p sess[key]
+    if var[key] == nil && sess[key] != nil
+#p 'setting'
+      var[key] = sess[key]
+    end
+  end
+
   def index
+
     # find unique ratings already in the database
     @all_ratings = Movie.find(:all, :select => "distinct rating", :order => :rating).collect { |movie| movie.rating }
+
+    # prepare checked states for each rating
+    @checks = Hash.new
+    @all_ratings.each { |rating| @checks.store(rating, false) }
 
     # ^^^ ideally the sort functionality would protect against xss attacks via URL parameter
     # ^^^ move into method of Movie
 
-    @checks = { 'G' => false, 'PG' => false, 'PG-13' => false, 'R' => false }
+    # default to session values if they're missing
+    session_def(params, session, :sort)
+    session_def(params, session, :ratings)
 
     if params[:sort] == nil then
       @order = "id"
@@ -32,7 +49,13 @@ class MoviesController < ApplicationController
       @conditions = @conditions + "'-')"
     end
 
+    # select the movies constrained by sorting and filtering
     @movies = Movie.find(:all, :order => @order, :conditions => @conditions)
+
+    # save session values for next iteration
+    session[:sort] = params[:sort]
+    session[:ratings] = params[:ratings]
+
   end
 
   def new
