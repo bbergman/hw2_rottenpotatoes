@@ -13,6 +13,9 @@ class MoviesController < ApplicationController
     if var[key] == nil && sess[key] != nil
 #p 'setting'
       var[key] = sess[key]
+      return true
+    else
+      return false
     end
   end
 
@@ -29,8 +32,9 @@ class MoviesController < ApplicationController
     # ^^^ move into method of Movie
 
     # default to session values if they're missing
-    session_def(params, session, :sort)
-    session_def(params, session, :ratings)
+    @redirect = false
+    @redirect = session_def(params, session, :sort)
+    @redirect = @redirect | session_def(params, session, :ratings)
 
     if params[:sort] == nil then
       @order = "id"
@@ -49,12 +53,19 @@ class MoviesController < ApplicationController
       @conditions = @conditions + "'-')"
     end
 
-    # select the movies constrained by sorting and filtering
-    @movies = Movie.find(:all, :order => @order, :conditions => @conditions)
-
     # save session values for next iteration
     session[:sort] = params[:sort]
     session[:ratings] = params[:ratings]
+
+    if @redirect then
+      @rateparams = ""
+      params[:ratings].each_key { |rating| @rateparams = @rateparams + "&" + rating + "=1" }
+      p ">>> redirecting to #{movies_path}?sort=#{params[:sort]}#{@rateparams}"
+      #redirect_to movies_path + "?sort=#{params[:sort]}"
+    end
+
+    # select the movies constrained by sorting and filtering
+    @movies = Movie.find(:all, :order => @order, :conditions => @conditions)
 
   end
 
