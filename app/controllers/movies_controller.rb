@@ -13,59 +13,109 @@ class MoviesController < ApplicationController
     if var[key] == nil && sess[key] != nil
 #p 'setting'
       var[key] = sess[key]
-      return true
-    else
-      return false
     end
   end
 
   def index
 
-    # find unique ratings already in the database
-    @all_ratings = Movie.find(:all, :select => "distinct rating", :order => :rating).collect { |movie| movie.rating }
+p '@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@'
+    # check for clearing sorting and filtering
+    if params[:reset] != nil then
 
-    # prepare checked states for each rating
-    @checks = Hash.new
-    @all_ratings.each { |rating| @checks.store(rating, false) }
+      # clear out everything and refresh page
+      session.clear
+      params.clear
 
-    # ^^^ ideally the sort functionality would protect against xss attacks via URL parameter
-    # ^^^ move into method of Movie
+      redirect_to movies_path
 
-    # default to session values if they're missing
-    @redirect = false
-    @redirect = session_def(params, session, :sort)
-    @redirect = @redirect | session_def(params, session, :ratings)
-
-    if params[:sort] == nil then
-      @order = "id"
     else
-      @order = params[:sort]
+
+      # make sure URI always represents current state for filtering
+      @ratings = ""
+      if params[:ratings] == nil && session[:ratings] != nil then
+p "44444 "
+p session[:ratings]
+        session[:ratings].each_key { |rating| p rating }
+@a = Array.new
+        session[:ratings].each_key { |rating| @a.push rating }
+p "55555"
+p @a
+        @a.each { |rating| @ratings = @ratings + "&ratings[" + rating + "]=1" }
+  p '##############################'
+  p "RATINGS>> becomes "
+  p @ratings
+  p '=============================='
+      end
+
+      # make sure URI always represents current state for sorting
+      @sort = ""
+      if params[:sort] == nil && session[:sort] != nil then
+        @sort = "sort=#{session[:sort]}"
+  p '------------------------------'
+  p "SORT>> " + session[:sort] + " becomes " + @sort
+  p '=============================='
+      end
+
+      # redirect to ensure a RESTful URI if needed
+      if @sort.length > 0 && @ratings.length == 0 then
+p '************************************************************************'
+p "-------->>>> #{movies_path}?#{@sort}"
+p '************************************************************************'
+        redirect_to movies_path + "?#{@sort}"
+      elsif @ratings.length > 0 && @sort.length == 0 then
+        @ratings = @ratings.gsub(/^&/, '')
+p '************************************************************************'
+p "-------->>>> #{movies_path}?#{@ratings}"
+p '************************************************************************'
+        redirect_to movies_path + "?#{@ratings}"
+      elsif @ratings.length > 0 && @sort.length > 0 then
+p '************************************************************************'
+p "-------->>>> #{movies_path}?#{@sort}#{@ratings}"
+p '************************************************************************'
+        redirect_to movies_path + "?#{@sort}#{@ratings}"
+      else
+
+        # find unique ratings already in the database
+        @all_ratings = Movie.find(:all, :select => "distinct rating", :order => :rating).collect { |movie| movie.rating }
+
+        # prepare checked states for each rating
+        @checks = Hash.new
+        @all_ratings.each { |rating| @checks.store(rating, false) }
+
+        # ^^^ ideally the sort functionality would protect against xss attacks via URL parameter
+        # ^^^ move into method of Movie
+
+        # default to session values if they're missing
+        session_def(params, session, :sort)
+        session_def(params, session, :ratings)
+
+        if params[:sort] == nil then
+          @order = "id"
+        else
+          @order = params[:sort]
+        end
+
+        if params[:ratings] == nil then
+          @conditions = "1 = 1"
+        else
+          @conditions = "rating in ("
+          params[:ratings].each_key { |rating|
+            @conditions = @conditions + "'" + rating + "',"
+            @checks[rating] = true
+          }
+          @conditions = @conditions + "'-')"
+        end
+
+        # save session values for next iteration
+        session[:sort] = params[:sort]
+        session[:ratings] = params[:ratings]
+
+        # select the movies constrained by sorting and filtering
+        @movies = Movie.find(:all, :order => @order, :conditions => @conditions)
+
+      end
+
     end
-
-    if params[:ratings] == nil then
-      @conditions = "1 = 1"
-    else
-      @conditions = "rating in ("
-      params[:ratings].each_key { |rating|
-        @conditions = @conditions + "'" + rating + "',"
-        @checks[rating] = true
-      }
-      @conditions = @conditions + "'-')"
-    end
-
-    # save session values for next iteration
-    session[:sort] = params[:sort]
-    session[:ratings] = params[:ratings]
-
-    if @redirect then
-      @rateparams = ""
-      params[:ratings].each_key { |rating| @rateparams = @rateparams + "&" + rating + "=1" }
-      p ">>> redirecting to #{movies_path}?sort=#{params[:sort]}#{@rateparams}"
-      #redirect_to movies_path + "?sort=#{params[:sort]}"
-    end
-
-    # select the movies constrained by sorting and filtering
-    @movies = Movie.find(:all, :order => @order, :conditions => @conditions)
 
   end
 
